@@ -7,6 +7,9 @@
 #Tutorials
 tutorials/
 
+# python bridge
+python-matlab-bridge/
+
 #Data/Images
 data/
 

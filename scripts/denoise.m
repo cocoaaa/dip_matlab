@@ -1,6 +1,6 @@
 % todo: use large scale solver
 %     : multi-dimensional
-% assumes width == height, ie square input
+% assumes a square input (width == height)
 
 function output = denoise(input, lambda)
 w = size(input,1);
@@ -22,7 +22,7 @@ D = sparse(1:n, 1:n, 1+lambda*nNeighbors.*ones(1,n), n, n);
 nInner = (w-2)*(h-2); 
 rs_inner = nan(1, nInner*nNeighbors);
 cs_inner = nan(1, nInner*nNeighbors);
-vals_inner = 1-lambda.*ones(1, nInner*nNeighbors);
+vals_inner = -lambda.*ones(1, nInner*nNeighbors);
 i = 1;
 for r = 2:h-1
     for c = 2:w-1
@@ -41,7 +41,6 @@ end
 
 % Debug viz
 A_inner = sparse(rs_inner, cs_inner, vals_inner, n, n);
-% spy(A_inner);
 
 % Boundary pixels
 nBdEntries = 4*2+ 2*(3*(w-2) + 3*(h-2));%2*(w+h) - 4;
@@ -95,7 +94,6 @@ end
 %four corners
 % 1. r=1; c=1; idx = c + (r-1)*w;
 idx = 1;
-% bottom = idx + w;
 rs_bd(i:i+1) = ones(1,2);
 cs_bd(i:i+1) = [2,  idx+w]; 
 i = i+2;
@@ -119,12 +117,22 @@ cs_bd(i:i+1) = [idx-1, idx-w];
 i = i+2;
 
 A_bd = sparse(rs_bd, cs_bd, vals_bd, n, n);
-% spy(A_bd);
-
 A = A_inner + A_bd;
-% spy(A);
-
 S = D + A;
+
+% Show sparse matrices
+figure;
+subplot(2,2,1);
+spy(A_inner);title("A inner");
+
+subplot(2,2,2);
+spy(A_bd);title("A BD");
+
+subplot(2,2,3);
+spy(A); title("A");
+
+subplot(2,2,4);
+spy(S); title("S");
 
 output = (reshape(S\input_vector, [w,h]))';
 end
