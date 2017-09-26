@@ -1,0 +1,15 @@
+#OS junk files
+*.DS_Store
+
+#Project files
+[Bb]uild/
+
+#Tutorials
+tutorials/
+
+#Data/Images
+data/
+
+#IDE
+.idea/
+cmake-build-debug/
