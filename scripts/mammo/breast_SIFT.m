@@ -1,0 +1,103 @@
+clc; clear all; close all;
+setupMammo;
+%ref: http://www.vlfeat.org/install-matlab.html
+
+b1 = imread('b1.png');
+b2 = imread('b2.png');
+b3 = imread('b3.png');
+B = [b1, b2, b3];
+
+figure;imagesc(B, [0,255]); colormap(gray);title('breast 1,2,3');
+figure;imagesc(B, [0,255]); title('breast 1,2,3 in color');
+
+%% Anisotropic diffusion for edge-preserving smoothing
+
+n_iter = 2; %how to decide this number? 
+%is there a relationship between niter and sigma in Gaussian blurring?
+delta_t = 1/7;
+kappa = 70;
+option = 1;
+[h,w] = size(b1);
+
+im1 = anisodiff2D( b1, n_iter, delta_t, kappa, option);
+im2 = anisodiff2D( b2, n_iter, delta_t, kappa, option);
+im3 = anisodiff2D( b3, n_iter, delta_t, kappa, option);
+
+% IMPORTANT: ALL images are of data type double in range [0,255]
+% change all to single to use vl_sift
+im1 = single(im1); im2 = single(im2); im3 = single(im3);
+
+%% SIFT 
+[f1,d1] = vl_sift(im1);
+[f2,d2] = vl_sift(im2);
+[f3,d3] = vl_sift(im3);
+
+f2_plot = f2; f3_plot = f3;
+f2_plot(1,:) = f2(1,:) + size(im1,2);
+f3_plot(1,:) = f3(1,:) + size(im1,2) + size(im2, 2);
+%% Visualize 50 randomly selected features
+figure; imagesc([im1, im2, im3], [0,255]); colormap(gray); hold on;
+title(sprintf("blurred im1,2,3: nIter=%d, k=%d",n_iter, kappa));
+
+%%
+nFeatures = min([size(f1,2), size(f2,2), size(f3,2)]);
+sel = randperm(nFeatures, 50);
+hf1 = vl_plotframe(f1(:,sel));
+hf2 = vl_plotframe(f2_plot(:,sel)); 
+hf3 = vl_plotframe(f3_plot(:,sel));
+set(hf1, 'color', 'y', 'linewidth', 2);
+set(hf2, 'color', 'y', 'linewidth', 2);
+set(hf3, 'color', 'y', 'linewidth', 2);
+
+%% Overlay descriptors
+hd1 = vl_plotsiftdescriptor(d1(:,sel), f1(:,sel));
+hd2 = vl_plotsiftdescriptor(d2(:,sel), f2_plot(:,sel));
+hd3 = vl_plotsiftdescriptor(d3(:,sel), f3_plot(:,sel));
+
+set(hd1, 'color', 'g');
+set(hd2, 'color', 'g');
+set(hd3, 'color', 'g');
+
+%% Matching the descriptors
+[matches_12, scores_12] = vl_ubcmatch(d1, d2) ;
+[matches_32, scores_32] = vl_ubcmatch(d3, d2) ;
+
+%% plot lines connecting matching features between im1 and im2
+xy1 = f1(1:2, matches_12(1,:));
+xy2 = f2_plot(1:2, matches_12(2,:));
+
+for i=1:5%size(1,2)
+    p = plot([xy1(1,i) xy2(1,i)], [xy1(2,i) xy2(2,i)]);
+    set(p, 'color', 'red');
+end
+
+%%
+% --------------------------------------------------------------------
+%                                           Extract features and match
+% --------------------------------------------------------------------
+[~, perm] = sort(scores_12, 'descend') ;
+perm = perm(1:5);
+matches_12 = matches_12(:, perm) ;
+scores_12  = scores_12(perm) ;
+
+x1 = f1(1,matches_12(1,:)) ;
+x2 = f2_plot(1,matches_12(2,:));
+y1 = f1(2,matches_12(1,:)) ;
+y2 = f2_plot(2,matches_12(2,:)) ;
+
+hold on ;
+h = line([x1 ; x2], [y1 ; y2]) ;
+set(h,'linewidth', 1, 'color', 'b') ;
+
+vl_plotframe(f1(:,matches_12(1,:))) ;
+vl_plotframe(f2_plot(:,matches_12(2,:))) ;
+axis image off ;
+
+
+
+
+%% Visualize as 3-dim surface
+figure;meshc(b1); cameratoolbar('Show'); cameratoolbar('setmode', 'orbit');
+hold on;
+meshc(b2); meshc(b3);
+xlabel('x'); ylabel('y'); zlabel('z');
