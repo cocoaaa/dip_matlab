@@ -3,6 +3,7 @@
 % experiment1: small translation by +1 pixel in x direction
 close all;
 clear all;
+addpath('../');
 addpath('/Local/Users/hjsong/Playground/dip_matlab/scripts/utils');
 imgDir='/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/other-data-gray/';
 gtDir = '/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/other-gt-flow/';

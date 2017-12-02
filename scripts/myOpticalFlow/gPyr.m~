@@ -1,0 +1,12 @@
+function pyr = gPyr(I, sigma, reduceFactor)%, nLevels) % since redundant to have both reduceFactor and nLevels
+% construct a gaussian pyramid of I.
+% Lowest level (level 1) contains the original image.
+% Image at the next level is recursively constructed from the image at t
+nLevels = computePyrHeight(maxMotion, reduceFactor);
+pyr{1} = I;
+for l = 2:nLevels
+  img = 
+  
+end
+
+end

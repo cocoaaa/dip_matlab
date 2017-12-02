@@ -1,6 +1,6 @@
 % addpath('../utils/');
 
-function [Ix, Iy, It] = getGradients(im1, im2)
+function [Ix, Iy, It] = getHSGradients(im1, im2)
 % computes Ix, Iy, It from im1 and im2 as described in HS paper
 [m,n] = size(im1);
 [m2, n2] = size(im2);
