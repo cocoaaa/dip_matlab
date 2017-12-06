@@ -1,7 +1,8 @@
-% addpath('../utils/');
 
 function [Ix, Iy, It] = getHSGradients(im1, im2)
 % computes Ix, Iy, It from im1 and im2 as described in HS paper
+addpath('/Local/Users/hjsong/Playground/dip_matlab/scripts/utils/');
+
 [m,n] = size(im1);
 [m2, n2] = size(im2);
 if (m ~= m2 || n ~= n2)

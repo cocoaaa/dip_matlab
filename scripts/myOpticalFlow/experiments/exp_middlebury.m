@@ -73,8 +73,8 @@ for li=1:length(lambdas)
         % update for the next iteration
         u_curr = u_next;
         v_curr = v_next;
-        u_curr_avg = imfilter(u_curr, laplacian_filter, 'replicate', 'same') ;
-        v_curr_avg = imfilter(v_curr, laplacian_filter, 'replicate', 'same');
+        u_curr_avg = imfilter(u_curr, laplacian_filter, 'replicate', 'same', 'conv') ;
+        v_curr_avg = imfilter(v_curr, laplacian_filter, 'replicate', 'same', 'conv');
         iter = iter + 1;
 
         % debug
