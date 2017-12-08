@@ -1,5 +1,9 @@
-function [labelsIm, clusterIm] = kmeans_spatial(im, K, lambda, maxIter, tol, option)
-% lambda is the weight on the spatial coordinates
+function [labelsIm, clusterIm] = ...
+  kmeans_spatial_gradient(im, gradIm, ...
+                          K, lambda1, maxIter, tol, option)
+% gradIm: aniostopic diffused gradient image's magnitude
+% lambda1 is the weight on the mag. gradient 
+% lambda2 is the weight on the spatial coordinates
 % That is, (1-lambda) is the weight for intensity
 % maxIter: max number of iterations 
 % tol: consecutive update difference as stopping criterion
@@ -7,8 +11,7 @@ function [labelsIm, clusterIm] = kmeans_spatial(im, K, lambda, maxIter, tol, opt
 %       : 'manual' - user selects random centers on the image;
 im = im2double(im);
 [m,n,nc] = size(im);
-X = zeros(m*n, nc+2); %row = [im(x,y,:), x, y]
-
+X = zeros(m*n, nc+3); %row = [im(x,y,:), x, y]
 % construct the data matrix
 for x=1:n
   for y=1:m
@@ -20,8 +23,6 @@ for x=1:n
     end
   end
 end
-% Standarize X's columns to have a zero mean and unit std
-X = cwise_normalize(X);
 
 % Initial centroids
 if (option=="manual")
@@ -32,26 +33,16 @@ else
   centerYs = randi([1,m], [1,K]);
 end
 
-centers = zeros(K, nc+2);
-normedXcoords = cwise_normalize([1:n]');
-normedYcoords = cwise_normalize([1:m]');
-
-
+centers = zeros(K, nc+3);
 for k = 1:K
-  xloc = centerXs(k)
-  yloc = centerYs(k)
-  cx = normedXcoords(xloc); cy = normedYcoords(yloc);
+  cx = centerXs(k); cy = centerYs(k);
   if (nc > 1)
-    centers(k,:) = [reshape(im(yloc,xloc,:), 1, nc, 1), cx, cy];
+    centers(k,:) = [reshape(im(cy,cx,:), 1, nc, 1), gradIm(cy,cx), cx, cy];
   else
-    centers(k,:) = [im(yloc,xloc), cx, cy];
+    centers(k,:) = [im(cy,cx), gradIm(cy,cx), cx, cy];
   end
 end
 
-
-
-% labels = zeros(m*n);
-% newCenters = nan(K, nc+2);
 % Iterative update
 diff = Inf;
 for i = 1:maxIter
@@ -77,10 +68,10 @@ end
 
 end
 
-function [labels, newCenters] = update(X, centers, lambda)
+function [labels, newCenters] = update(X, centers, lambda1, lambda2)
   K = size(centers,1);
   nPoints = size(X,1);
-  nc = size(X,2) - 2;
+  nc = size(X,2) - 3;
   nMembers = zeros(K);
   labels = nan(nPoints,1);
   newCenters = zeros(size(centers));
@@ -90,8 +81,9 @@ function [labels, newCenters] = update(X, centers, lambda)
     myCluster = nan;
     for k=1:K
       dIntensity = norm( X(i,1:nc) - centers(k, 1:nc) );
+      dGradient = abs( X(i,nc+1) - centers(k, nc+1) );
       dSpace = norm( X(i, nc:end) - centers(k, nc:end) );
-      dist = (1-lambda)*dIntensity + lambda*dSpace;
+      dist = (1-lambda1 - lambda2)*dIntensity + lambda1*dGradient + lambda2*dSpace;
       
       if (dist > minDist); continue; end
       minDist = dist;

@@ -1,10 +1,14 @@
-function binaryIm = kmeans_spatial(im, K, lambda, maxIter, tol)
+function [labelsIm, clusterIm] = kmeans_spatial(im, K, lambda, maxIter, tol, option)
 % lambda is the weight on the spatial coordinates
 % That is, (1-lambda) is the weight for intensity
 % maxIter: max number of iterations 
 % tol: consecutive update difference as stopping criterion
+% option: 'random' - initialize with random centers
+%       : 'manual' - user selects random centers on the image;
+im = im2double(im);
 [m,n,nc] = size(im);
 X = zeros(m*n, nc+2); %row = [im(x,y,:), x, y]
+
 % construct the data matrix
 for x=1:n
   for y=1:m
@@ -16,22 +20,29 @@ for x=1:n
     end
   end
 end
-
-
+% Standarize X's columns to have a zero mean and unit std
+X = cwise_normalize(X);
 
 % Initial centroids
-centerXs = randi([1,n], [1,K]);
-centerYs = randn([1,m], [1,K]);
-centers = zeros(K, nc+2);
+if (option=="manual")
+  figure; imshow(im,[]);
+  [centerXs, centerYs] = ginput(K);
+else
+  centerXs = randi([1,n], [1,K]);
+  centerYs = randi([1,m], [1,K]);
+end
 
+centers = zeros(K, nc+2);
 for k = 1:K
   x = centerXs(k); y = centerYs(k);
   if (nc > 1)
-    centers(k,:) = [reshape(im(y,x,:), 1, nc, 1), x, y];
+    centers(k,:) = [reshape(im(y,x,:), 1, nc, 1), cx, cy];
   else
-    centers(k,:) = [im(y,x), x, y];
+    centers(k,:) = [im(y,x), cx, cy];
   end
 end
+
+
 
 % labels = zeros(m*n);
 % newCenters = nan(K, nc+2);
@@ -43,16 +54,30 @@ for i = 1:maxIter
   [labels, newCenters] = update(X, centers, lambda);
   diff = norm(centers - newCenters); 
   centers = newCenters;
+%   fprintf("iter: %d, diff: %.5f\n", i, diff);
 end
+fprintf("---(lambda=%.4f)clustering ended after iter=%d, diff=%.5f\n",...
+  lambda, i, diff);
+labelsIm = reshape(labels, m,n);
 
-binaryIm = reshape(labels, m,n);
-figure;imshow(binaryIm); title("spatial-intensity based kmeans(k=2)");
+% Assign center's avg intensity value to the pixels
+clusterIm = zeros(m,n,nc);
+for x=1:n
+  for y=1:m
+    myCluster = labelsIm(y,x);
+    clusterIm(y,x,:) = centers(myCluster, 1:nc);
+  end
+end
 
 end
 
 function [labels, newCenters] = update(X, centers, lambda)
+  K = size(centers,1);
   nPoints = size(X,1);
+  nc = size(X,2) - 2;
   nMembers = zeros(K);
+  labels = nan(nPoints,1);
+  newCenters = zeros(size(centers));
   for i = 1:nPoints
     
     minDist = Inf;
@@ -69,7 +94,7 @@ function [labels, newCenters] = update(X, centers, lambda)
     % store the best cluster and minDist to calculate the center
     labels(i) = myCluster;
     nMembers(myCluster) = nMembers(myCluster) + 1;
-    newCenters(myCluster,:) = X(i);  
+    newCenters(myCluster,:) = newCenters(myCluster, :) + X(i,:);  
     
   end
   
