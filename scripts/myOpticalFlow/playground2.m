@@ -1,0 +1,82 @@
+%playground
+run('setPaths.m');
+
+%% Load im1 and im2
+fname1 = '/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/TestSeq/Shift0.png';
+fname2 = '/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/TestSeq/ShiftR40.png';
+im1 = im2double(imread(fname1));
+im2 = im2double(imread(fname2));
+
+%% Experiment1: Simple x-translation 
+im1 = zeros(100,200);
+im2 = zeros(100,200);
+im1(:, 100:150)=1;
+im2(:, 120:170)=1; %shift by 20
+
+[m,n] = size(im1);
+u = zeros(m,n); v = zeros(m,n);
+u(:, 100:150)=20;
+
+w = warpBW(im2, u, v);
+figure;
+subplot(2,2,1); spy(im1); title('im1');
+subplot(2,2,2); spy(im2); title('im2');
+subplot(2,2,3); spy(u); title('u');
+subplot(2,2,4) ;spy(w); title('warped');
+
+%% compare two ways of computing Iyz
+%1. Iyz = Dy(Iz) where Iz = warpedI2 - I1
+Iz = w-im1;
+[Ixz, Iyz_1] = gradient(Iz);
+
+%2. Iyz = Dy(warpedI2) - Dy(I1);
+[I1x, I1y] = gradient(im1);
+[Wx, Wy] = gradient(w);
+Iyz_2 = I1y - Wy;
+
+figure; imshowpair(Iyz_1, Iyz_2, 'montage');title('Iyz_1, Iyz_2');
+
+
+%% Naive test on dPhi computations
+prev_du = zeros(m,n);
+prev_dv = zeros(m,n);
+rho = 0;
+epsilon = 0.001;
+[Ix,Iy] = gradient(w);
+Iz = w-im1;
+[Ixx, Iyx] = gradient(Ix);
+[Ixy, Iyy] = gradient(Iy);
+[Ixz, Iyz] = gradient(Iz);
+
+dPhi_data = computeDPhiData( ...
+  prev_du, prev_dv, Ix, Iy, Iz, Ixx, Ixy, Ixz, Iyy, Iyz, rho, epsilon );
+
+dPhi_smooth = computeDPhiSmooth(u,v, epsilon);
+
+
+figure;
+subplot(3,3,1); spy(Iz); title('Iz'); subplot(3,3,2); spy(Ixx); title('Ixx'); subplot(3,3,3); spy(Iyx); title('Iyx');
+subplot(3,3,4); spy(Ixy); title('Ixy'); subplot(3,3,5); spy(Iy); title('Iy'); subplot(3,3,6); spy(Iz); title('Iz');
+subplot(3,3,7); spy(Ixz); title('Ixz'); subplot(3,3,8); spy(Iyz); title('Iyz');
+subplot(3,3,9); spy(dPhi_data); title('dphidata');
+
+figure;
+subplot(2,2,1); imshow(dPhi_data); title('dphidata');
+subplot(2,2,2); imshow(dPhi_smooth); title('dphismooth');
+
+
+%% Test buildProblem
+ucurr = u;
+vcurr = v;
+alpha = 0;
+
+[S,rhs] = buildProblem(...
+  ucurr, vcurr, dPhi_data, dPhi_smooth, alpha, ...
+  cu1, cv1, cb1, cu2, cv2, cb2);
+
+%% Test idof
+[im1, im2] = cropToyImages();
+rho = 0; alpha = 1; epsilon = 0.001; nOuterIter = 2; nInnerIter = 2;
+reduceFactor = 1;
+[u,v] = ldof(im1, im2, reduceFactor, nOuterIter, nInnerIter, ...
+                      rho, alpha, epsilon);

@@ -55,6 +55,12 @@ for l = num_level:-1:1
     I2_warped = warp_image(I2,u0,v0);
     Iz_warped = I2_warped-I1;
     
+    % debug
+    if (l == 1)
+      figure; imshowpair(I2_warped, I1); title(sprintf("scale %d, warped and im1", l));
+      save('./warped.mat', 'I2_warped');
+    end
+    
     %second order derivatives
     [Ixx1, Ixy1] = gaussDeriv_dir(Ix1);
     [~, Iyy1] = gaussDeriv_dir(Iy1);

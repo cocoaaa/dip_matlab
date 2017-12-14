@@ -14,7 +14,7 @@ function warpedI2 = warpBW(I2, u, v)
   xnew(xnew < 1) = 1;
   xnew(xnew > n) = n;
   ynew(ynew < 1) = 1;
-  ynew(ynew > n) = n;
+  ynew(ynew > m) = m;
   
   warpedI2 = interp2(X,Y,I2, xnew, ynew, 'bilinear');
   warpedI2(isnan(u) | isnan(v)) = nan;

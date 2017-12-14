@@ -24,7 +24,7 @@ end
 X = cwise_normalize(X);
 
 % Initial centroids
-if (option=="manual")
+if (nstrcmp(option,"manual"))
   figure; imshow(im,[]);
   [centerXs, centerYs] = ginput(K);
 else
@@ -33,12 +33,18 @@ else
 end
 
 centers = zeros(K, nc+2);
+normedXcoords = cwise_normalize([1:n]');
+normedYcoords = cwise_normalize([1:m]');
+
+
 for k = 1:K
-  x = centerXs(k); y = centerYs(k);
+  xloc = centerXs(k)
+  yloc = centerYs(k)
+  cx = normedXcoords(xloc); cy = normedYcoords(yloc);
   if (nc > 1)
-    centers(k,:) = [reshape(im(y,x,:), 1, nc, 1), cx, cy];
+    centers(k,:) = [reshape(im(yloc,xloc,:), 1, nc, 1), cx, cy];
   else
-    centers(k,:) = [im(y,x), cx, cy];
+    centers(k,:) = [im(yloc,xloc), cx, cy];
   end
 end
 

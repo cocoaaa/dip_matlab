@@ -15,12 +15,13 @@ tol = 1e-3;
 %% Run clustering
 % lambda = weight on spatial information 
 im = im1;
-lambdas = [0, 0.0003, 0.0006, 0.001, 0.003];%, 0.01, 0.1] ;
+lambdas = [0.003];%[0, 0.0003, 0.0006, 0.001, 0.003];%, 0.01, 0.1] ;
 for i = 1:length(lambdas)
   lambda = lambdas(i);
   [labelsIm,clusterIm] = kmeans_spatial(im, K, lambda, maxIter, tol, "manual");
-  figure;imshow([im, clusterIm],[]); title(sprintf('clustered, labmda %.4f', lambda));
+  figure;imshow([im, clusterIm],[]); title(sprintf('b1 clustered, labmda %.4f', lambda));
 end
+imwrite(clusterIm, '../../figs/mammo/clusterIm1_0.003.png');
 
 % good lambdas (with manual centers selected)
 % im1: 0.003

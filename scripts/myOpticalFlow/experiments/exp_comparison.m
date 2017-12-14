@@ -20,6 +20,11 @@ figure; imshow(computeColor( flowGT(:,:,1), flowGT(:,:,2) )); title("ground trut
 im1 = rgb2gray(im2double(imread('/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/Juggle/0.png')));
 im2 = rgb2gray(im2double(imread('/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/Juggle/1.png')));
 
+%% Part3: mammo contours
+im1 = im2double(imread('~/bw1.png'));
+im2 = im2double(imread('~/bw2.png'));
+im3  = im2double(imread('~/bw3.png'));
+
 
 %% Perform optical flows
 [m,n] = size(im1);

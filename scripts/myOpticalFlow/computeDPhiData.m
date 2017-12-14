@@ -1,0 +1,6 @@
+function dPhi_data = computeDPhiData( ...
+  prev_du, prev_dv, Ix, Iy, Iz, Ixx, Ixy, Ixz, Iyy, Iyz, rho, epsilon )
+arg = (Iz+Ix.^prev_du +Iy.^prev_dv).^2 + ...
+  rho*( (Ixz + Ixx.*prev_du + Ixy.*prev_dv).^2 + (Iyz + Ixy.*prev_du + Iyy.*prev_dv).^2 );
+dPhi_data = 1./ (2*sqrt(epsilon^2 + arg));
+end

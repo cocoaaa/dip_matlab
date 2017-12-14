@@ -1,0 +1,56 @@
+%playground
+run('setPaths.m');
+
+%% Load im1 and im2
+fname1 = '/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/TestSeq/Shift0.png';
+fname2 = '/Local/Users/hjsong/Playground/dip_matlab/figs/opticalFlow/TestSeq/ShiftR40.png';
+im1 = im2double(imread(fname1));
+im2 = im2double(imread(fname2));
+
+im1 = zeros(100,200);
+im2 = zeros(100,200);
+im1(:, 100:150)=1;
+im2(:, 150:200)=1; %shift by 50
+
+%%
+[m,n] = size(im1);
+u = zeros(m,n); v = zeros(m,n);
+u(:, 100:150)=50;
+
+w = warpBW(im2, u, v);
+figure;imshowpair(im1, w);
+figure;spy(im1); title('im1');
+figure;spy(im2); title('im2');
+figure;spy(w); title('w');
+
+%% compare two ways of computing Iyz
+%1. Iyz = Dy(Iz) where Iz = warpedI2 - I1
+Iz = w-im1;
+[Ixz, Iyz_1] = gradient(Iz);
+
+%2. Iyz = Dy(warpedI2) - Dy(I1);
+[I1x, I1y] = gradient(im1);
+[Wx, Wy] = gradient(w);
+Iyz_2 = I1y - Wy;
+
+figure; imshowpair(Iyz_1, Iyz_2, 'montage');title('Iyz_1, Iyz_2');
+
+
+%% Test dPhi computations
+prev_du = zeros(m,n);
+prev_dv = zeros(m,n);
+rho = 0;
+[Ix,Iy] = gradient(w);
+Iz = w-im1;
+[Ixx, Ixy] = gradient(Ix);
+[Iyx, Iyy] = gradient(Iy);
+Ixz = 
+dPhi_data = computeDPhiData( ...
+  prev_du, prev_dv, Ix, Iy, Iz, Ixx, Ixy, Ixz, Iyy, Iyz, rho )
+
+
+%% Test buildProblem
+ucurr = 
+[S,rhs] = buildProblem(...
+  ucurr, vcurr, dPhi_data, dPhi_smooth, alpha, ...
+  cu1, cv1, cb1, cu2, cv2, cb2);
