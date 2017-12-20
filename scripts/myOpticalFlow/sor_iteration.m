@@ -1,0 +1,77 @@
+function [du,dv] = sor_iteration(...
+      du, dv, u, v, dPhi_data, dPhi_smooth, w, alpha, ...
+      cu1, cv1, cb1, cu2, cv2, cb2)
+    % u,v: current pyramid scale's flow fields: u_k, v_k
+    % du, dv: du_k,l and dv_k,l where l is the current caller's innerloop
+    % level
+    
+    
+[m,n] = size(du);
+alpha_dPhi_smooth = alpha*dPhi_smooth;
+% uii and vii values for the first equation
+DiagU1 = dPhi_data.*cu1;
+DiagV1 = dPhi_data.*cv1;
+
+% uii and vii values for the second equation
+DiagU2 = dPhi_data.*cu2;
+DiagV2 = dPhi_data.*cv2 - alpha_dPhi_smooth;
+
+% values for direct,diagonal neighbor pixels
+% directValue = (1/6)*alpha_dPhi_smooth;
+% diagValue = (1/12)*alpha_dPhi_smooth;
+
+% construct the vector on RHS
+rhs1 = -dPhi_data.*cb1;% + alpha_dPhi_smooth.*Lu;
+rhs2 = -dPhi_data.*cb2;% + alpha_dPhi_smooth.*Lv;
+
+% compute 
+for x=1:n
+  for y=1:m
+    
+    % compute sum of du and dv values at the neighbors
+    [directs, diagonals] = getNeighborsNaive(m,n,y,x);
+
+    sumDirectNgbrs_unext = 0;
+    sumDirectNgbrs_vnext = 0;
+    sumDirectDPhiSmooth = 0;
+    for i = 1:size(directs,1)
+      nx = directs(i,1); ny = directs(i,2);
+      sumDirectNgbrs_unext = sumDirectNgbrs_unext + dPhi_smooth(ny,nx)*(u(ny,nx) + du(ny,nx));
+      sumDirectNgbrs_vnext = sumDirectNgbrs_vnext + dPhi_smooth(ny,nx)*(v(ny,nx) + dv(ny,nx));
+      sumDirectDPhiSmooth = sumDirectDPhiSmooth + dPhi_smooth(ny,nx); 
+    end
+    
+    sumDiagNgbrs_unext = 0;
+    sumDiagNgbrs_vnext = 0;
+    sumDiagDPhiSmooth = 0;
+    for i = 1:size(diagonals,1)
+      nx = diagonals(i,1); ny = diagonals(i,2);
+      sumDiagNgbrs_unext = sumDiagNgbrs_unext + dPhi_smooth(ny,nx)*(u(ny,nx) + du(ny,nx));
+      sumDiagNgbrs_vnext = sumDiagNgbrs_vnext + dPhi_smooth(ny,nx)*(v(ny,nx) + dv(ny,nx));
+      sumDiagDPhiSmooth = sumDiagDPhiSmooth + dPhi_smooth(ny,nx); 
+    end
+    
+    avgDPhiSmooth = sumDirectDPhiSmooth/6 + sumDiagDPhiSmooth/12;
+    avgDPhiSmoothNgbh_unext = sumDirectNgbrs_unext/6 + sumDiagNgbrs_unext/12;
+    avgDPhiSmoothNgbh_vnext = sumDirectNgbrs_vnext/6 + sumDiagNgbrs_vnext/12;
+
+    % first equation
+    du(y,x) = du(y,x) - (w/(DiagU1(y,x)+alpha*avgDPhiSmooth))*...
+      (rhs1(y,x) - DiagV1(y,x)*dv(y,x) + alpha*avgDPhiSmoothNgbh_unext);    
+    
+    % second equation
+    dv(y,x) = dv(y,x) - (w/( DiagV2(y,x)+alpha*avgDPhiSmooth ))*...
+      (rhs2(y,x)- DiagU2(y,x)*du(y,x) + alpha*avgDPhiSmoothNgbh_vnext);
+    
+    if (isnan(du(y,x)) || isnan(dv(y,x)))
+      disp('du or dv has a nan!');
+      dbstop at 68 in sor_iteration
+    end
+    
+  end
+end
+
+
+end
+
+    

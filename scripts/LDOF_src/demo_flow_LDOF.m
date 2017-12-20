@@ -11,10 +11,11 @@ imfile3='/Local/Users/hjsong/Playground/dip_matlab/figs/mammo/b3.png';
 % imfile2='/Local/Users/hjsong/Playground/dip_matlab/figs/mammo/clusterIm2_0.001.png';
 
 im1=imread(imfile1);
-im2=imread(imfile2); % or im2=imread(imfile3);
+% im2=imread(imfile2); % or 
+im2=imread(imfile3);
 
 
-verbose=0;
+verbose=1;
 [p,q,~]=size(im1);
 para=get_para_flow(p,q);
 

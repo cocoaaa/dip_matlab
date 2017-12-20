@@ -1,18 +1,31 @@
 
-function [u,v] = ldof(I1, I2, reduceFactor, nOuterIter, nInnerIter, ...
-                      rho, alpha, epsilon)
-[I1x, I1y] = gradient(I1);
-[m,n] = size(I1);
-nPixels = m*n;
-
+function [u,v] = ldof(im1, im2, pyrSigma, reduceFactor, nLevels, nInnerIter, ...
+                      rho, alpha, epsilon, verbose)
+figno = 1;
 % Build pyramids
+% gPyr1 = getPyramid(im1, pyrSigma, reduceFactor);
+% gPyr2 = getPyramid(im2, pyrSigma, reduceFactor);
+% nLevels = 
 
+inds_outofimage = [];
+for k = nLevels:-1:1 %outerIter
+  fprintf("---pyrLevel: %d\n", k);
+%   I1 = gPyr1{k};
+%   I2 = gPyr2{k};
+  I1 = im1; I2 = im2;
 
-
-u = zeros(m,n);
-v = zeros(m,n);
-for k = 1: nOuterIter
-  fprintf("outerIter: %d", k);
+  [m,n] = size(I1);
+  nPixels = m*n;
+  [ys, xs] = meshgrid(1:m, 1:n); % to check inds_outofimage locations
+  
+  % initial u,v at the coarest level
+  if k == nLevels
+    u = zeros(m,n);
+    v = zeros(m,n);
+  end
+  
+  % compute derivatives that stay constant at this scale
+  [I1x, I1y] = gradient(I1);
   warpI = warpBW(I2, u, v);
   [Ix, Iy] = gradient(warpI);
   [Ixx, Iyx] = gradient(Ix); % potentially want to check Iyx and Ixy
@@ -20,6 +33,14 @@ for k = 1: nOuterIter
   Iz = warpI - I1;
   Ixz = Ix - I1x;
   Iyz = Iy - I1y;
+  
+  % fix warped values at outofimage pixel locations
+  Ixx = handle_outofimage(Ixx, inds_outofimage);
+  Ixy = handle_outofimage(Ixy, inds_outofimage);
+  Iyy = handle_outofimage(Iyy, inds_outofimage);
+  Ixz = handle_outofimage(Ixz, inds_outofimage);
+  Iyz = handle_outofimage(Iyz, inds_outofimage);
+
   % compute terms that are constant over inner iteration  
   cu1 = Ix.^2 + rho*(Ixx.^2 + Ixy.^2);
   cv1 = Ix.^Iy + rho*(Ixy.*(Ixx + Iyy));
@@ -28,48 +49,67 @@ for k = 1: nOuterIter
   cu2 = Ix.^Iy + rho*(Iyy.*(Ixx + Iyy));
   cv2 = Iy.^2 + rho*(Iyy.^2 + Ixy.^2);
   cb2 = Iy.^Iz + rho*(Iyy.*Iyz + Ixy.*Ixz);
-  
-  
+   
   % verbose
-  figure; imshow(warpI); title('warped im2');
+  if verbose
+    figure(figno); imshow(warpI); title('warped im2'); figno = figno+1;
+    figure(figno); imshowpair(I1, warpI); title('im1 and warped im2'); figno = figno+1;
+
+    figure(figno);
+    subplot(3,3,1); imshow(Iz); title('Iz'); subplot(3,3,2); imshow(Ixx); title('Ixx'); subplot(3,3,3); imshow(Iyx); title('Iyx');
+    subplot(3,3,4); imshow(Ixy); title('Ixy'); subplot(3,3,5); imshow(Iy); title('Iy'); subplot(3,3,6); imshow(Iz); title('Iz');
+    subplot(3,3,7); imshow(Ixz); title('Ixz'); subplot(3,3,8); imshow(Iyz); title('Iyz');
+    figno = figno+1;
+
+    figure(figno);
+    subplot(2,3,1); imshow(cu1); title('cu1');subplot(2,3,2); imshow(cv1); title('cv1');subplot(2,3,3); imshow(cb1); title('cb1');
+    subplot(2,3,4); imshow(cu2); title('cu2');subplot(2,3,5); imshow(cv2); title('cv2');subplot(2,3,6); imshow(cb2); title('cb2');
+    figno = figno+1;
+  end
   
-  figure;
-  subplot(3,3,1); spy(Iz); title('Iz'); subplot(3,3,2); spy(Ixx); title('Ixx'); subplot(3,3,3); spy(Iyx); title('Iyx');
-  subplot(3,3,4); spy(Ixy); title('Ixy'); subplot(3,3,5); spy(Iy); title('Iy'); subplot(3,3,6); spy(Iz); title('Iz');
-  subplot(3,3,7); spy(Ixz); title('Ixz'); subplot(3,3,8); spy(Iyz); title('Iyz');
-
-  figure;
-  subplot(2,3,1); imshow(cu1); title('cu1');subplot(2,3,2); imshow(cv1); title('cv1');subplot(2,3,3); imshow(cb1); title('cb1');
-  subplot(2,3,1); imshow(cu2); title('cu2');subplot(2,3,2); imshow(cv2); title('cv2');subplot(2,3,3); imshow(cb2); title('cb2');
-
-
- 
-  uCurr = u; vCurr = v; %u_kl, v_kl (with l=1) is set to u_k, v_k
-  prev_du = zeros(m,n); prev_dv = zeros(m,n);
+  % inner iteration
+  %u_k,1, v_k,1 is set to u_k, v_k 
+  %equivalent to set du_k,1 and dv_k,1  to zero
+  uCurr = u; vCurr = v; 
+  du = zeros(nPixels,1); dv = zeros(nPixels,1);
   for l = 1: nInnerIter
-    dPhi_data = computeDPhiData(prev_du, prev_dv, ...
+    dPhi_data = computeDPhiData(du, dv, ...
       Ix, Iy, Iz, Ixx, Ixy, Ixz, Iyy, Iyz, rho, epsilon);
     dPhi_smooth = computeDPhiSmooth(uCurr, vCurr, epsilon);
     tic;
-    [S,b] = buildProblem(...
-      uCurr, vCurr, dPhi_data, dPhi_smooth, alpha, ...
-      cu1, cv1, cb1, cu2, cv2, cb2);
-    toc; 
-    figure;spy(S); title('problem matrix');
-    wNext = S\b;
-    uNext = reshape(wNext(1:nPixels), m,n); %u_k,(l+1)
-    vNext = reshape(wNext(nPixels+1:end), m,n); %v_k,(l+1)
     
-    % update u,v,du,dv for next innerIter
-    prev_du = uNext - uCurr; %du_kl
-    prev_dv = vNext - vCurr; %dv_kl
-    uCurr = uNext;
-    vCurr = vNext;
+    % solve the constraints and update du and dv
+    [du,dv] = sor_iteration(...
+      uCurr, vCurr, dPhi_data, dPhi_smooth, alpha, ...
+      cu1, cv1, cb1, cu2, cv2, cb2); %du_k,l+1, dv_k,l+1
+    toc; 
+   
+    
+    if verbose
+      figure(figno); 
+      subplot(1,2,1); imshow(du); title(sprintf('updated du for scale %d',k));
+      subplot(1,2,2); imshow(dv); title(sprintf('updated dv for scale %d',k));
+      figno = figno + 1;
+    end
   end
   
+  inds_outofimage = find(xs+uCurr < 1 | xs+uCurr > n | ys+vCurr < 1 | ys+vCurr > m);
+  
+  % upsample and rescale for next pyramid level
+  % todo: check the dimension (rounding)
   u = (1/reduceFactor) * imresize(uCurr, 1/reduceFactor, 'bicubic');
   v = (1/reduceFactor) * imresize(vCurr, 1/reduceFactor, 'bicubic');
 end
 
 
+end
+
+function A = handle_outofimage(A, inds)
+if isempty(inds)
+    return;
+end
+[p,q,r]=size(A);
+for i=1:r
+    A(inds+(i-1)*p*q)=0;
+end
 end

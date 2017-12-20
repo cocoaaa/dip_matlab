@@ -1,7 +1,7 @@
 
 function [u,v] = ldof(im1, im2, pyrSigma, reduceFactor, nLevels, nInnerIter, ...
                       rho, alpha, epsilon, verbose)
-figno = 1;
+fig1 = 1; fig2 = 2; fig3 = 3; fig4 = 4; fig5 = 5;
 % Build pyramids
 % gPyr1 = getPyramid(im1, pyrSigma, reduceFactor);
 % gPyr2 = getPyramid(im2, pyrSigma, reduceFactor);
@@ -49,64 +49,68 @@ for k = nLevels:-1:1 %outerIter
   cu2 = Ix.^Iy + rho*(Iyy.*(Ixx + Iyy));
   cv2 = Iy.^2 + rho*(Iyy.^2 + Ixy.^2);
   cb2 = Iy.^Iz + rho*(Iyy.*Iyz + Ixy.*Ixz);
-   
+  
+  % compute Laplacian values of u_k, v_k for inner iteration
+  laplacian = [1/12 1/6 1/12; 1/6 0 1/6; 1/12 1/6 1/12];
+  Lu = imfilter(u, laplacian, 'same', 'conv');
+  Lv = imfilter(v, laplacian, 'same', 'conv');
+
   % verbose
   if verbose
-    figure(figno); imshow(warpI); title('warped im2'); figno = figno+1;
-    figure(figno); imshowpair(I1, warpI); title('im1 and warped im2'); figno = figno+1;
+    fprintf('pyramid %d', k);
+    figure(fig1); imshow(warpI); title('warped im2'); 
+    figure(fig2); imshowpair(I1, warpI); title('im1 and warped im2'); 
 
-    figure(figno);
+    figure(fig3);
     subplot(3,3,1); imshow(Iz); title('Iz'); subplot(3,3,2); imshow(Ixx); title('Ixx'); subplot(3,3,3); imshow(Iyx); title('Iyx');
     subplot(3,3,4); imshow(Ixy); title('Ixy'); subplot(3,3,5); imshow(Iy); title('Iy'); subplot(3,3,6); imshow(Iz); title('Iz');
     subplot(3,3,7); imshow(Ixz); title('Ixz'); subplot(3,3,8); imshow(Iyz); title('Iyz');
-    figno = figno+1;
 
-    figure(figno);
+    figure(fig4);
     subplot(2,3,1); imshow(cu1); title('cu1');subplot(2,3,2); imshow(cv1); title('cv1');subplot(2,3,3); imshow(cb1); title('cb1');
     subplot(2,3,4); imshow(cu2); title('cu2');subplot(2,3,5); imshow(cv2); title('cv2');subplot(2,3,6); imshow(cb2); title('cb2');
-    figno = figno+1;
   end
   
   % inner iteration
   %u_k,1, v_k,1 is set to u_k, v_k 
   %equivalent to set du_k,1 and dv_k,1  to zero
-  uCurr = u; vCurr = v; 
-  prev_du = zeros(m,n); prev_dv = zeros(m,n);
-  for l = 1: nInnerIter
-    dPhi_data = computeDPhiData(prev_du, prev_dv, ...
+  du = zeros(m,n); dv = zeros(m,n);
+  for l = 1:nInnerIter
+    dPhi_data = computeDPhiData(du, dv, ...
       Ix, Iy, Iz, Ixx, Ixy, Ixz, Iyy, Iyz, rho, epsilon);
-    dPhi_smooth = computeDPhiSmooth(uCurr, vCurr, epsilon);
+    dPhi_smooth = computeDPhiSmooth(u, v, epsilon);
+    
+    % solve the constraints and update du and dv
     tic;
-    [S,b] = buildProblem(...
-      uCurr, vCurr, dPhi_data, dPhi_smooth, alpha, ...
-      cu1, cv1, cb1, cu2, cv2, cb2);
-    toc; 
-    wNext = S\b;
-    uNext = reshape(wNext(1:nPixels), m,n); %u_k,(l+1)
-    vNext = reshape(wNext(nPixels+1:end), m,n); %v_k,(l+1)
+    [du,dv] = sor_iteration(...
+      du, dv, Lu, Lv, dPhi_data, dPhi_smooth, alpha, ...
+      cu1, cv1, cb1, cu2, cv2, cb2); %update du, dv to du_k,l+1, dv_k,l+1
+    toc;
     
-    % update u,v,du,dv for next innerIter
-    prev_du = uNext - uCurr; %du_kl
-    prev_dv = vNext - vCurr; %dv_kl
-    uCurr = uNext;
-    vCurr = vNext;
-    
-    if verbose
-      figure(figno); subplot(1,2,1); imshow(uCurr); title('inneriter ucurr');
-      subplot(1,2,2); imshow(vCurr); title('inneriter vcurr');
-      figno = figno + 1;
-      
-      figure(figno);spy(S); title('problem matrix'); 
-      figno = figno+1;
+    if (verbose && mod(nInnerIter,5)==0)
+      figure(fig6);
+      subplot(1,2,1); imshow(du); title(sprintf('%d, %: du', k,l));
+      subplot(1,2,1); imshow(dv); title(sprintf('%d, %: dv', k,l));
     end
+    
   end
   
-  inds_outofimage = find(xs+uCurr < 1 | xs+uCurr > n | ys+vCurr < 1 | ys+vCurr > m);
+  
+  if verbose 
+    figure(fig5); 
+    subplot(1,2,1); imshow(du); title(sprintf('pyrlevel %d: updated du',k));
+    subplot(1,2,2); imshow(dv); title(sprintf('pyrlevel %d: updated dv',k));
+  end
+  
+  % update u_k and v_k 
+  u = u + du;
+  v = v + dv;
+  inds_outofimage = find(xs+u < 1 | xs+u > n | ys+v < 1 | ys+v > m);
   
   % upsample and rescale for next pyramid level
   % todo: check the dimension (rounding)
-  u = (1/reduceFactor) * imresize(uCurr, 1/reduceFactor, 'bicubic');
-  v = (1/reduceFactor) * imresize(vCurr, 1/reduceFactor, 'bicubic');
+  u = (1/reduceFactor) * imresize(u, 1/reduceFactor, 'bicubic');
+  v = (1/reduceFactor) * imresize(v, 1/reduceFactor, 'bicubic');
 end
 
 

@@ -30,8 +30,8 @@ for wi = 1:nWarps % warping idx
   diff_r = Inf;
   for innerIter = 1: maxIter 
     if (diff_r < tol); break; end
-    ur_avg = imfilter(ur_curr, laplacian, 'replicate', 'same', 'conv');
-    vr_avg = imfilter(vr_curr, laplacian, 'replicate', 'same', 'conv');
+    ur_avg = imfilter(ur_curr, laplacian, 'same', 'conv');
+    vr_avg = imfilter(vr_curr, laplacian, 'same', 'conv');
     
     urTop1 = I1 - warpedI2 + warpedI2x.*u_curr - warpedI2y.*(vr_curr - v_curr);
     urTop = urTop1.*warpedI2x + (lambdaSq*ur_avg);

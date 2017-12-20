@@ -53,7 +53,6 @@ dPhi_data = computeDPhiData( ...
 
 dPhi_smooth = computeDPhiSmooth(u,v, epsilon);
 
-
 figure;
 subplot(3,3,1); spy(Iz); title('Iz'); subplot(3,3,2); spy(Ixx); title('Ixx'); subplot(3,3,3); spy(Iyx); title('Iyx');
 subplot(3,3,4); spy(Ixy); title('Ixy'); subplot(3,3,5); spy(Iy); title('Iy'); subplot(3,3,6); spy(Iz); title('Iz');
@@ -76,7 +75,10 @@ alpha = 0;
 
 %% Test idof
 [im1, im2] = cropToyImages();
-rho = 0; alpha = 1; epsilon = 0.001; nOuterIter = 2; nInnerIter = 2;
+rho = 0; alpha = 0.1; epsilon = 0.001; nLevels = 1; nInnerIter = 10; w = 1.9;
+pyrSigma = 0.03;
 reduceFactor = 1;
-[u,v] = ldof(im1, im2, reduceFactor, nOuterIter, nInnerIter, ...
-                      rho, alpha, epsilon);
+verbose = 1;
+[u,v] = ldof_sor(im1, im2, pyrSigma, reduceFactor, nLevels, nInnerIter, w, ...
+             rho, alpha, epsilon, verbose);
+w = warpBW(im2, u,v);

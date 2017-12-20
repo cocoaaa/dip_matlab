@@ -56,10 +56,10 @@ for l = num_level:-1:1
     Iz_warped = I2_warped-I1;
     
     % debug
-    if (l == 1)
-      figure; imshowpair(I2_warped, I1); title(sprintf("scale %d, warped and im1", l));
-      save('./warped.mat', 'I2_warped');
-    end
+%     if (l == 1)
+%       figure; imshowpair(I2_warped, I1); title(sprintf("scale %d, warped and im1", l));
+%       save('./warped.mat', 'I2_warped);
+%     end
     
     %second order derivatives
     [Ixx1, Ixy1] = gaussDeriv_dir(Ix1);
@@ -80,7 +80,6 @@ for l = num_level:-1:1
     Ixx_warped = fix_margin(Ixx_warped, inds_outofimage);
     Ixy_warped = fix_margin(Ixy_warped, inds_outofimage);
     Iyy_warped = fix_margin(Iyy_warped, inds_outofimage);
-    Iyz_warped = fix_margin(Iyz_warped, inds_outofimage);
     
     
     %transform the descriptor matches to the current scale
@@ -145,7 +144,7 @@ for l = num_level:-1:1
         if verbose && iter==max_iter
             u = u0+du;
             v = v0+dv;
-            flow_warp(I1,I2,cat(3,u,v),1)
+            flow_warp(I1,I2,cat(3,u,v),100)
             %check_flow_correspondence(I1,I2,cat(3,u,v));
             % flow_edge_map(I1,I2,cat(3,u,v),1);
             title(['pyramid level ' num2str(l)])
@@ -169,6 +168,8 @@ end
 F=cat(3,u,v);
 fprintf('done!\n');
 end
+
+
 function A = fix_margin(A, inds)
 if isempty(inds)
     return;
