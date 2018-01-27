@@ -1,0 +1,15 @@
+addpath('/Local/Users/hjsong/Playground/dip_matlab/scripts/OpticalFlow')
+addpath('/Local/Users/hjsong/Playground/dip_matlab/scripts/ReadData3D_version1k/')
+addpath('/Local/Users/hjsong/Playground/dip_matlab/figs/mammo');
+mammoDir = '/Local/Users/hjsong/Playground/dip_matlab/figs/mammo';
+fname = strcat(mammoDir, 'flow2D.mat');
+load '/Local/Users/hjsong/Playground/dip_matlab/figs/mammo/flow2D.mat'
+flow_view=flowToColor(cat();
+imwrite(flow_view,[pwd '/view.png'],'png');
+
+fixed= ReadData3D('/Local/Users/hjsong/temp/fixed.mha');
+moving= ReadData3D('/Local/Users/hjsong/temp/moving.mha');
+disp= ReadData3D('/Local/Users/hjsong/temp/displacement.mha');
+warped= ReadData3D('/Local/Users/hjsong/temp/warpedMovingImage.mha');
+
+% imshow(disp ,[]);

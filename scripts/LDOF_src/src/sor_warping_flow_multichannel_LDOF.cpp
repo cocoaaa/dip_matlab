@@ -43,7 +43,7 @@ void sor(double* u_descr, double* v_descr, double * ro_descr, double* psi_descr,
             B_const_u[i]+=psi_data[j]*(ix[j]*iz[j]+gamma*ixx[j]*ixz[j]+gamma*ixy[j]*iyz[j]);
             B_coef_v[i]+=psi_data[j]*(ix[j]*iy[j]+gamma*ixx[j]*ixy[j]+gamma*ixy[j]*iyy[j]);
             B_const_v[i]+=psi_data[j]*(iy[j]*iz[j]+gamma*ixy[j]*ixz[j]+gamma*iyy[j]*iyz[j]);
-            Aiipart_u[i]+=psi_data[j]*(pow(ix[j], 2)+gamma*pow(ixy[j], 2)+gamma*pow(ixx[j], 2));
+            Aiipart_u[i]+=psi_data[j]*( pow(ix[j], 2)+gamma*pow(ixy[j], 2)+gamma*pow(ixx[j], 2));
             Aiipart_v[i]+=psi_data[j]*(pow(iy[j], 2)+gamma*pow(ixy[j], 2)+gamma*pow(iyy[j], 2));
             //adding the descriptors
             
@@ -94,13 +94,15 @@ void sor(double* u_descr, double* v_descr, double * ro_descr, double* psi_descr,
             
             
             
-            du[i]=(1-w)*du[i]+
-                    (w*(psi_n*(u_n+du_n)+
-                    psi_e*(u_e+du_e)+
-                    psi_w*(u_w+du_w)+
-                    psi_s*(u_s+du_s)-
-                    (psi_n+psi_e+psi_w+psi_s)*u[i])-
-                    (w/alpha)*(B_coef_u[i]*dv[i]+B_const_u[i]))
+            du[i]=(1-w)*du[i]
+                    +
+                    (
+                      w*(psi_n*(u_n+du_n)+ psi_e*(u_e+du_e)+ 
+                         psi_w*(u_w+du_w)+ psi_s*(u_s+du_s)-
+                        (psi_n+psi_e+psi_w+psi_s)*u[i]) 
+                      -
+                      (w/alpha)*(B_coef_u[i]*dv[i]+B_const_u[i])
+                    )
                     /(psi_n+psi_e+psi_w+psi_s+
                     (1/alpha)*Aiipart_u[i]);
             
